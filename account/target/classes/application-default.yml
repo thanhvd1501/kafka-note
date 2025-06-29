@@ -1,0 +1,40 @@
+server:
+  port: 8080
+
+  # this value is overwritten in values file
+  servlet:
+    context-path: /api/v1
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/account
+    username: account
+    password: account
+    driver-class-name: org.postgresql.Driver
+
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    group-id: account-group
+    topics: account-topic
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.tool.hbm2ddl: DEBUG
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /docs

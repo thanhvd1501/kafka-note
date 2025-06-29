@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  card:
+    image: postgres:17.5
+    container_name: card
+    restart: always
+    environment:
+      POSTGRES_USER: card
+      POSTGRES_PASSWORD: card
+      POSTGRES_DB: card
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata2:/var/lib/postgresql/data
+
+volumes:
+  pgdata2:
