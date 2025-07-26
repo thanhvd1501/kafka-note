@@ -505,6 +505,84 @@ JVM là một cỗ máy tinh vi, gồm 3 bộ phận chính:
 * **Interpreter (Thông dịch viên):** Đọc và thực thi từng dòng bytecode. Cách này dễ thực hiện nhưng chậm.
 * **JIT (Just-In-Time) Compiler (Trình biên dịch tức thời):** Để tăng tốc. JVM sẽ theo dõi xem đoạn code nào được chạy thường xuyên ("hot code"). JIT sẽ dịch thẳng những đoạn code nóng này thành mã máy gốc, giúp chúng chạy nhanh hơn rất nhiều ở những lần gọi sau.
 
+***
+
+### **Cách hoạt động & Cơ chế bên trong của JVM**
+
+Toàn bộ quá trình có thể được chia thành ba giai đoạn chính, tương ứng với các khối trong sơ đồ: **Nạp mã (Loading)**, **Lưu trữ & Quản lý bộ nhớ (Memory Management)**, và **Thực thi (Execution)**.
+
+#### **1. Giai đoạn Nạp mã: Class Loader (Trình nạp lớp)**
+
+Đây là cổng vào của JVM. Khi bạn chạy lệnh `java MyProgram`, **Class Loader** sẽ là bộ phận đầu tiên hoạt động. Nhiệm vụ của nó là tìm, nạp và chuẩn bị các file bytecode (`.class`) từ ổ đĩa vào bộ nhớ của JVM.
+
+Quá trình này bao gồm 3 bước nhỏ:
+* **Loading (Nạp):** Đọc file `.class` và tạo một đối tượng `Class` tương ứng trong bộ nhớ Heap.
+* **Linking (Liên kết):**
+    * **Verification (Xác minh):** Kiểm tra xem bytecode có hợp lệ, an toàn và tuân thủ các quy tắc của Java hay không. Đây là một lớp bảo vệ quan trọng.
+    * **Preparation (Chuẩn bị):** Cấp phát bộ nhớ cho các biến tĩnh (`static`) và gán giá trị mặc định cho chúng (ví dụ: `0` cho `int`, `null` cho đối tượng).
+    * **Resolution (Phân giải):** Thay thế các tham chiếu tượng trưng trong code (ví dụ: tên lớp, tên phương thức) bằng các tham chiếu trực tiếp đến địa chỉ bộ nhớ thực.
+* **Initialization (Khởi tạo):** Thực thi khối mã khởi tạo tĩnh (`static` block) và gán các giá trị ban đầu cho các biến tĩnh.
+
+Sau khi Class Loader hoàn thành nhiệm vụ, toàn bộ thông tin về lớp của bạn đã sẵn sàng trong các vùng nhớ của JVM.
+
+#### **2. Giai đoạn Lưu trữ: Runtime Data Areas (Các vùng nhớ lúc chạy)**
+
+Đây là phần trung tâm của sơ đồ, là không gian làm việc của JVM. Bộ nhớ này được chia thành nhiều vùng, mỗi vùng có một mục đích riêng và được chia sẻ hoặc độc quyền cho từng luồng (thread).
+
+* **Class Area (hay Method Area - Vùng phương thức):**
+    * **Chức năng:** Lưu trữ thông tin ở cấp độ lớp, không phải đối tượng. Nó chứa "bản thiết kế" của các lớp, bao gồm: metadata của lớp, mã bytecode của các phương thức, và các biến tĩnh (`static variable`).
+    * **Đặc điểm:** Chỉ có **một** vùng này và nó được **chia sẻ cho tất cả các luồng**.
+    * *Ví von:* Đây là thư viện bản vẽ kỹ thuật của nhà máy.
+
+* **Heap (Vùng nhớ đống):**
+    * **Chức năng:** Đây là nơi tất cả các **đối tượng** (được tạo bằng từ khóa `new`) và các mảng được cấp phát bộ nhớ. Đây cũng là khu vực hoạt động chính của **Garbage Collector (GC)**.
+    * **Đặc điểm:** Chỉ có **một** vùng Heap và nó được **chia sẻ cho tất cả các luồng**. Đây là vùng nhớ động lớn nhất.
+    * *Ví von:* Đây là nhà kho và dây chuyền sản xuất của nhà máy, nơi các sản phẩm (đối tượng) được tạo ra và lưu trữ.
+
+* **Stack (Vùng nhớ ngăn xếp):**
+    * **Chức năng:** Lưu trữ thông tin về các lệnh gọi phương thức. Mỗi khi một phương thức được gọi, một "khung" (Stack Frame) mới sẽ được tạo và đẩy vào Stack. Khung này chứa các **biến cục bộ** (local variables), các tham chiếu đến đối tượng, và các kết quả tạm thời của phương thức đó. Khi phương thức kết thúc, khung của nó sẽ được gỡ ra.
+    * **Đặc điểm:** **Mỗi luồng có một Stack riêng**, do đó không có xung đột dữ liệu trên Stack giữa các luồng.
+    * *Ví von:* Đây là bàn làm việc cá nhân của mỗi công nhân (luồng), nơi họ để dụng cụ và các bộ phận đang lắp ráp cho công việc hiện tại.
+
+* **PC Register (Program Counter Register - Thanh ghi bộ đếm chương trình):**
+    * **Chức năng:** Lưu địa chỉ của chỉ thị bytecode **tiếp theo** mà luồng đang thực thi. Nó hoạt động như một con trỏ, cho biết "tôi đang làm đến đâu rồi".
+    * **Đặc điểm:** **Mỗi luồng có một PC Register riêng**.
+    * *Ví von:* Đây là ngón tay của bạn đang chỉ vào dòng chữ đang đọc trong một cuốn sách.
+
+* **Native Method Stack (Ngăn xếp phương thức Native):**
+    * **Chức năng:** Tương tự như Stack thông thường, nhưng nó được sử dụng riêng cho các phương thức "native" – là các phương thức được viết bằng ngôn ngữ khác như C/C++.
+    * **Đặc điểm:** **Mỗi luồng có một Native Method Stack riêng**.
+    * *Ví von:* Đây là một bàn làm việc chuyên dụng khác, dùng cho các công việc cần công cụ đặc biệt không có trong bộ đồ nghề Java chuẩn.
+
+#### **3. Giai đoạn Thực thi & Tương tác**
+
+Sau khi đã có "nhà kho" (Heap) và "bàn làm việc" (Stack), đã đến lúc thực hiện công việc.
+
+* **Execution Engine (Bộ máy thực thi):**
+    * **Chức năng:** Đây là bộ phận "CPU ảo" của JVM. Nó đọc bytecode từ Class Area và thực thi chúng. Nó bao gồm:
+        * **Interpreter (Trình thông dịch):** Đọc và thực thi từng lệnh bytecode một cách tuần tự.
+        * **JIT Compiler (Trình biên dịch tức thời):** Để tối ưu hiệu năng, JIT sẽ tìm các đoạn code được chạy thường xuyên ("hot code") và dịch chúng thành mã máy gốc (native code) để chạy nhanh hơn nhiều.
+        * **Garbage Collector (Bộ thu gom rác):** Hoạt động ngầm để dọn dẹp các đối tượng không còn được sử dụng trong Heap.
+
+* **Java Native Interface (JNI - Giao diện Native của Java):**
+    * **Chức năng:** Đây là một cái "cầu nối". Nó là một framework cho phép mã Java đang chạy trong JVM có thể gọi hoặc được gọi bởi các ứng dụng và thư viện viết bằng ngôn ngữ khác như C, C++.
+    * *Ví von:* Đây là bộ chuyển đổi giắc cắm, cho phép bạn cắm thiết bị Java vào "ổ điện" của thế giới C/C++.
+
+* **Java Native Libraries (Các thư viện Native của Java):**
+    * **Chức năng:** Đây là các thư viện được viết bằng C/C++ (hoặc ngôn ngữ khác) cung cấp các chức năng cấp thấp mà bản thân Java không trực tiếp xử lý (ví dụ: các thao tác I/O, đồ họa cấp thấp). JNI chính là cầu nối để Execution Engine có thể sử dụng các thư viện này.
+
+### **Tổng kết luồng hoạt động**
+
+1.  Bạn chạy lệnh `java MyProgram`.
+2.  **Class Loader** nạp file `MyProgram.class` vào JVM.
+3.  Thông tin lớp được lưu vào **Class Area**, biến tĩnh được chuẩn bị.
+4.  **Execution Engine** bắt đầu thực thi phương thức `main()`.
+5.  Một khung (frame) cho `main()` được đẩy vào **Stack** của luồng chính. **PC Register** trỏ đến lệnh đầu tiên.
+6.  Khi code tạo đối tượng `new MyObject()`, bộ nhớ cho đối tượng này được cấp phát trên **Heap**, và một tham chiếu đến nó được lưu trong biến cục bộ trên **Stack**.
+7.  Nếu code gọi một phương thức `native`, **JNI** sẽ được sử dụng để thực thi mã trong **Java Native Libraries**, và **Native Method Stack** sẽ được dùng.
+8.  Trong suốt quá trình, **Garbage Collector** âm thầm chạy trên **Heap** để dọn dẹp. **JIT Compiler** cũng theo dõi và tối ưu các đoạn code "nóng".
+9.  Khi phương thức `main()` kết thúc, luồng chính kết thúc và JVM tắt.
+
 ### **Mục 4: Cú pháp & Ví dụ Code thực tế**
 
 Bạn không trực tiếp viết code "cho" JVM, nhưng bạn tương tác với nó qua dòng lệnh và cách bạn viết code Java.
